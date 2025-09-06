@@ -72,4 +72,123 @@ document.getElementById("themeToggle").addEventListener("click", () => {
 document.getElementById("soundToggle").addEventListener("click", () => {
   soundEnabled = !soundEnabled;
   document.getElementById("soundToggle").textContent = soundEnabled ? "🔊 Sound On" : "🔇 Sound Off";
-});  
+});
+
+function playSound(sound) {
+  if (soundEnabled) {
+    sound.currentTime = 0;
+    sound.play();
+  }
+}
+
+function startGame() {
+  nextTurn();
+}
+
+function nextTurn() {
+  input.value = "";
+  input.disabled = false;
+  const diff = difficultySelect.value;
+  const paraList = paragraphs[diff];
+  currentPara = paraList[Math.floor(Math.random() * paraList.length)];
+  renderParagraph();
+  turn.textContent = `${players[playerTurn]}'s Turn`;
+  timer = 30;
+  timerDiv.textContent = `⏳ ${timer}s`;
+  clearInterval(interval);
+  interval = setInterval(updateTimer, 1000);
+}
+
+function renderParagraph() {
+  paragraphDiv.innerHTML = "";
+  currentPara.split("").forEach(char => {
+    const span = document.createElement("span");
+    span.textContent = char;
+    paragraphDiv.appendChild(span);
+  });
+}
+
+function updateTimer() {
+  timer--;
+  timerDiv.textContent = `⏳ ${timer}s`;
+  if (timer <= 0) {
+    clearInterval(interval);
+    playSound(buzzerSound);
+    input.disabled = true;
+    calculateResult();
+    if (playerTurn === 1) {
+      playerTurn = 2;
+      setTimeout(nextTurn, 1500);
+    } else {
+      showLeaderboard();
+    }
+  }
+}
+
+input.addEventListener("input", () => {
+  const spans = paragraphDiv.querySelectorAll("span");
+  const typed = input.value.split("");
+  let correctChars = 0;
+  typed.forEach((char, idx) => {
+    if (spans[idx]) {
+      if (char === spans[idx].textContent) {
+        spans[idx].classList.add("correct");
+        spans[idx].classList.remove("incorrect");
+        correctChars++;
+        playSound(typeSound);
+      } else {
+        spans[idx].classList.add("incorrect");
+        spans[idx].classList.remove("correct");
+        playSound(errorSound);
+      }
+    }
+  });
+  const progress = (typed.length / currentPara.length) * 100;
+  progressBar.style.width = `${progress}%`;
+});
+
+function calculateResult() {
+  const typed = input.value.trim();
+  const words = typed.split(" ").length;
+  const wpm = Math.round(words / 0.5);
+  const correctChars = [...typed].filter((c, i) => c === currentPara[i]).length;
+  const accuracy = Math.round((correctChars / currentPara.length) * 100);
+  results[`Player${playerTurn}`] = { name: players[playerTurn], wpm, accuracy };
+}
+
+function showLeaderboard() {
+  gameScreen.classList.add("hidden");
+  resultScreen.classList.remove("hidden");
+
+  const p1 = results.Player1;
+  const p2 = results.Player2;
+  let winner = "Draw";
+  if (p1.wpm > p2.wpm) winner = p1.name + " 🎉";
+  else if (p2.wpm > p1.wpm) winner = p2.name + " 🎉";
+
+  leaderboard.innerHTML = `
+    <p>${p1.name} → WPM: ${p1.wpm}, Accuracy: ${p1.accuracy}%</p>
+    <p>${p2.name} → WPM: ${p2.wpm}, Accuracy: ${p2.accuracy}%</p>
+    <h3>Winner: ${winner}</h3>
+  `;
+  playSound(winSound);
+  startConfetti();
+}
+
+// 🎉 Confetti
+const confettiCanvas = document.getElementById("confetti");
+const ctx = confettiCanvas.getContext("2d");
+confettiCanvas.width = window.innerWidth;
+confettiCanvas.height = window.innerHeight;
+let confettiPieces = [];
+
+function startConfetti() {
+  confettiPieces = Array.from({ length: 200 }, () => ({
+    x: Math.random() * confettiCanvas.width,
+    y: Math.random() * confettiCanvas.height - confettiCanvas.height,
+    r: Math.random() * 6 + 4,
+    d: Math.random() * 0.5 + 0.5,
+    color: `hsl(${Math.random() * 360}, 100%, 50%)`
+  }));
+  requestAnimationFrame(drawConfetti);
+}
