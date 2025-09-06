@@ -192,3 +192,15 @@ function startConfetti() {
   }));
   requestAnimationFrame(drawConfetti);
 }
+function drawConfetti() {
+  ctx.clearRect(0, 0, confettiCanvas.width, confettiCanvas.height);
+  confettiPieces.forEach(p => {
+    ctx.beginPath();
+    ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
+    ctx.fillStyle = p.color;
+    ctx.fill();
+    p.y += p.d * 5;
+    if (p.y > confettiCanvas.height) p.y = 0;
+  });
+  requestAnimationFrame(drawConfetti);
+}
